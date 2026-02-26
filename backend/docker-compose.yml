@@ -1,0 +1,23 @@
+version: "3.9"
+
+networks:
+  zm_server_network:
+    name: zm_server_network
+
+services:
+  postgres:
+    container_name: zm_server_db
+    image: postgres:latest
+    restart: always
+    volumes:
+      - zm_server_db_data:/var/lib/postgres/data
+    environment:
+      - POSTGRES_DB=${DB_DATABASE}
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5444:5432"
+    networks:
+      - zm_server_network
+volumes:
+  zm_server_db_data:
