@@ -7,7 +7,7 @@ if (backendSecret === "") {
 }
 const socketURL = `ws://localhost:8080/ws/backend?secret=${backendSecret}`;
 export class Socket extends Wrappers.Singleton<Socket>() {
-  private socket: WebSocket.WebSocket;
+  private socket: WebSocket.WebSocket | null;
   private isConnected: boolean;
   private messagesHandlers: Record<
     string,
@@ -15,19 +15,33 @@ export class Socket extends Wrappers.Singleton<Socket>() {
   >;
 
   private retryCount: number;
+  private retryInterval: NodeJS.Timeout | null;
+  private url: string;
 
-  constructor(url: string) {
+  constructor() {
     super();
-    this.socket = new WebSocket.WebSocket(url);
+    this.url = socketURL;
     this.isConnected = false;
     this.messagesHandlers = {};
     this.retryCount = 0;
+    this.retryInterval = null;
+    this.socket = null;
   }
 
   public connect() {
+    if (this.isConnected) {
+      console.log("Already connected to backend websocket");
+      return;
+    }
+    this.socket = new WebSocket.WebSocket(this.url);
     this.socket.onopen = () => {
       this.isConnected = true;
       console.log("Connected to backend websocket");
+      if (this.retryInterval) {
+        clearTimeout(this.retryInterval);
+        this.retryInterval = null;
+        this.retryCount = 0;
+      }
     };
     this.socket.onmessage = (event: WebSocket.MessageEvent) => {
       const data = JSON.parse(event.data.toString()) as BackendWsMessage;
@@ -43,20 +57,29 @@ export class Socket extends Wrappers.Singleton<Socket>() {
     };
     this.socket.onclose = () => {
       this.isConnected = false;
-      this.isConnected = false;
-      if (this.retryCount < 3) {
-        setInterval(() => {
-          this.retryCount++;
-          console.log(
-            `[WebSocket] Retrying to connect... (attempt: ${this.retryCount})`,
-          );
-          if (this.isConnected || this.retryCount >= 3) {
-            return;
-          }
-          this.connect();
-        }, 5000);
-      }
+      this.retryConnect();
     };
+  }
+
+  private retryConnect() {
+    if (this.retryInterval) {
+      clearTimeout(this.retryInterval);
+      this.retryInterval = null;
+    }
+    this.retryInterval = setTimeout(() => {
+      console.log(
+        `[WebSocket] Retrying to connect... (attempt: ${this.retryCount})`,
+      );
+      this.retryCount++;
+      if (this.retryCount > 3) {
+        console.log(
+          `[WebSocket] Max retries reached, stopping retries (attempt: ${this.retryCount})`,
+        );
+        return;
+      }
+
+      this.connect();
+    }, 5000);
   }
 
   public registerHandler = <T = unknown>(
@@ -72,14 +95,22 @@ export class Socket extends Wrappers.Singleton<Socket>() {
 
   @RequireConnected()
   public send = <T = unknown>(event: string, data?: T) => {
-    console.log("Event:", event);
-    console.log("Data:", data);
-    this.socket.send(JSON.stringify({ event, data }));
+    const debugObject = { event, data };
+    console.log("[Socket] Message sent: ", debugObject);
+    if (this.socket) {
+      this.socket.send(JSON.stringify({ event, data }));
+    } else {
+      console.error("Not connected to backend websocket");
+    }
   };
 
   public close() {
-    this.socket.close();
+    if (this.socket) {
+      this.socket.close();
+    } else {
+      console.error("Not connected to backend websocket");
+    }
   }
 }
 
-export const socket = new Socket(socketURL);
+export const socket = new Socket();

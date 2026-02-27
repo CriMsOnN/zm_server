@@ -72,7 +72,7 @@ func (h *ServerHandlers) HandleClientSocket(c *gin.Context) {
 			continue
 		}
 
-		handled, responseEvent, responseData, handlerErr := handler.HandleSocketEvent(action, msg.Data)
+		handled, responseData, handlerErr := handler.HandleSocketEvent(action, msg.Data)
 		if !handled {
 			h.writeError(conn, "unknown_event", ErrUnknownEvent.Error())
 			continue
@@ -82,9 +82,9 @@ func (h *ServerHandlers) HandleClientSocket(c *gin.Context) {
 			continue
 		}
 
-		if responseEvent != "" {
+		if responseData != nil {
 			if err := conn.WriteJSON(gin.H{
-				"event": domain + "." + responseEvent,
+				"event": msg.Event,
 				"data":  responseData,
 			}); err != nil {
 				h.wsLogger.Errorf("Failed to write client websocket response: %v", err)

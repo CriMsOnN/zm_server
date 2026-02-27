@@ -45,8 +45,12 @@ export class Players extends Wrappers.Singleton<Players>() {
         fivem: fivemID,
         license: license,
       });
-      console.log(`Player ${source} upserted`);
       this.onlineUsers.add(source);
+      this.socket.send("session.joined", {
+        netID: source.toString(),
+        name: playerName,
+        identifier: fivemID,
+      });
     } else {
       const identifiers = this.getIdentifiersForPlayer(source);
       const fivemID = identifiers.fivem;
@@ -56,15 +60,11 @@ export class Players extends Wrappers.Singleton<Players>() {
         fivem: fivemID,
         license: license,
       });
-      console.log(`Player ${source} upserted`);
       this.onlineUsers.add(source);
-    }
-
-    if (identifiers?.fivem) {
-      this.socket.send("user.joined", {
-        id: source,
+      this.socket.send("session.joined", {
+        netID: source.toString(),
         name: playerName,
-        identifier: identifiers.fivem,
+        identifier: identifiers?.fivem,
       });
     }
   };
@@ -74,6 +74,10 @@ export class Players extends Wrappers.Singleton<Players>() {
     const src = +source;
     this.identifiers.delete(src);
     this.onlineUsers.delete(src);
+    this.socket.send("session.dropped", {
+      netID: source.toString(),
+      reason: reason,
+    });
   };
 
   @LocalEvent("playerJoining")

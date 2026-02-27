@@ -33,3 +33,12 @@ func (r *UserRepository) CreateOrUpdateUser(user *dto.CreateOrUpdateUserDTO) err
 	}
 	return nil
 }
+
+func (r *UserRepository) GetUserByFivemIdentifier(identifier string) (*models.User, error) {
+	user := models.User{}
+	err := r.db.Get(&user, "SELECT * FROM users WHERE fivem = $1", identifier)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}

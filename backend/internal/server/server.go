@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/crimsonn/zm_server/internal/database"
+	"github.com/crimsonn/zm_server/internal/events"
 	"github.com/crimsonn/zm_server/internal/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -26,6 +27,7 @@ type Server struct {
 	Database *sqlx.DB
 	Logger   *logrus.Entry
 	handlers *ServerHandlers
+	events   events.Bus
 }
 
 func NewServer(config Config) *Server {
@@ -34,12 +36,15 @@ func NewServer(config Config) *Server {
 		log.Fatalf("failed to initialize postgres: %v", err)
 	}
 
+	bus := events.NewInMemoryBus()
+
 	server := &Server{
 		Config:   config,
 		Router:   gin.Default(),
 		Database: db,
 		Logger:   logger.NewComponentLogger("api-server"),
-		handlers: NewServerHandlers(db),
+		handlers: NewServerHandlers(db, bus),
+		events:   bus,
 	}
 	server.setupMiddlewares()
 	server.handlers.RegisterRoutes(server.Router)
@@ -82,6 +87,8 @@ func (s *Server) Start(done chan bool) error {
 	close(done)
 	time.Sleep(1 * time.Second)
 	s.Logger.Info("server shutting down...")
+	s.events.Clear()
+	s.Logger.Info("events cleared")
 	if err := s.Database.Close(); err != nil {
 		s.Logger.Errorf("failed to close database connection: %v", err)
 		return err

@@ -1,1 +1,1 @@
-cd backend && go run main.go
+cd backend && air -c .air.toml

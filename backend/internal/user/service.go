@@ -21,6 +21,9 @@ func (s *UserService) GetUsers() ([]models.User, error) {
 	return s.repository.GetUsers()
 }
 
+func (s *UserService) GetUserByFivemIdentifier(identifier string) (*models.User, error) {
+	return s.repository.GetUserByFivemIdentifier(identifier)
+}
 func (s *UserService) CreateOrUpdateUser(user *dto.CreateOrUpdateUserDTO) error {
 	return s.repository.CreateOrUpdateUser(user)
 }
