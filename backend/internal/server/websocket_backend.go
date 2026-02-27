@@ -65,20 +65,43 @@ func (h *ServerHandlers) HandleBackendSocket(c *gin.Context) {
 			return
 		}
 
-		var message backendSocketMessage
-		if err := json.Unmarshal(messageBytes, &message); err != nil {
+		var msg backendSocketMessage
+		if err := json.Unmarshal(messageBytes, &msg); err != nil {
 			h.writeError(conn, "invalid_json", ErrInvalidJSON.Error())
 			continue
 		}
 
-		switch message.Event {
-		case "ping":
-			_ = conn.WriteJSON(gin.H{
-				"event": "pong",
-				"data":  gin.H{"message": "Pong"},
-			})
-		default:
-			h.writeError(conn, "unknown_event", ErrUnknownEvent.Error())
+		domain, action, ok := h.splitEventDomain(msg.Event)
+		if !ok {
+			h.writeError(conn, "invalid_event", ErrInvalidEvent.Error())
+			continue
 		}
+
+		handler, exists := h.backendHandlers[domain]
+		if !exists {
+			h.writeError(conn, "unknown_domain", ErrUnknownDomain.Error())
+			continue
+		}
+
+		handled, responseEvent, responseData, handlerErr := handler.HandleSocketEvent(action, msg.Data)
+		if !handled {
+			h.writeError(conn, "unknown_event", ErrUnknownEvent.Error())
+			continue
+		}
+		if handlerErr != nil {
+			h.writeError(conn, msg.Event+":error", handlerErr.Error())
+			continue
+		}
+
+		if responseEvent != "" {
+			if err := conn.WriteJSON(gin.H{
+				"event": domain + "." + responseEvent,
+				"data":  responseData,
+			}); err != nil {
+				h.wsLogger.Errorf("Failed to write backend websocket response: %v", err)
+				return
+			}
+		}
+
 	}
 }

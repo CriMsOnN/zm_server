@@ -1,1 +1,3 @@
-console.log("Hello, world!");
+setImmediate(() => {
+  emitNet("base:playerJoined");
+});

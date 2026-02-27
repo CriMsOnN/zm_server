@@ -12,5 +12,8 @@
   "devDependencies": {
     "@citizenfx/client": "2.0.26198-1",
     "@citizenfx/server": "2.0.26261-1"
+  },
+  "dependencies": {
+    "reflect-metadata": "^0.2.2"
   }
 }

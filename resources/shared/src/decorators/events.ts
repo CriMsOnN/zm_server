@@ -1,80 +1,63 @@
-type EventKind = "net" | "local";
+import "reflect-metadata";
 
-type MethodMeta = {
-  propertyKey: string | symbol;
-  eventName: string;
-  kind: EventKind;
-};
-
-const eventStore = new WeakMap<object, MethodMeta[]>();
-const instanceGuard = new WeakSet<object>();
-
-function addMethodMeta(
-  target: object,
-  propertyKey: string | symbol,
-  kind: EventKind,
-  eventName: string,
-): void {
-  const existing = eventStore.get(target) ?? [];
-  existing.push({ propertyKey, kind, eventName });
-  eventStore.set(target, existing);
-}
-
-function setEvent(kind: EventKind, eventName: string): MethodDecorator {
-  return (target, propertyKey) => {
-    addMethodMeta(target, propertyKey, kind, eventName);
-  };
-}
-
-function registerInstance(instance: object): void {
-  if (instanceGuard.has(instance)) return;
-  instanceGuard.add(instance);
-
-  const prototype = Object.getPrototypeOf(instance);
-  const methods = eventStore.get(prototype) ?? [];
-
-  for (const method of methods) {
-    const fn = (instance as Record<string | symbol, unknown>)[
-      method.propertyKey
-    ];
-    if (typeof fn !== "function") continue;
-
-    if (method.kind === "net") {
-      onNet(method.eventName, (...args: unknown[]) => {
-        const src = source;
-        (fn as (...invokeArgs: unknown[]) => void).call(instance, src, ...args);
-      });
-      continue;
+export const RemoteEvent = (eventName: string) => {
+  return function (target: any, key: any) {
+    if (!Reflect.hasMetadata("events", target)) {
+      Reflect.defineMetadata("events", [], target);
     }
 
-    on(method.eventName, (...args: unknown[]) => {
-      (fn as (...invokeArgs: unknown[]) => void).call(instance, ...args);
-    });
-  }
-}
+    const netEvents = Reflect.getMetadata("events", target) as any[];
 
-export function EventController(): ClassDecorator {
-  return <TFunction extends Function>(target: TFunction): TFunction => {
-    const Wrapped = class extends (target as unknown as new (
-      ...args: unknown[]
-    ) => object) {
-      constructor(...args: unknown[]) {
+    netEvents.push({
+      name: eventName,
+      net: true,
+      key,
+    });
+
+    Reflect.defineMetadata("events", netEvents, target);
+  };
+};
+
+export const LocalEvent = (eventName: string) => {
+  return function (target: any, key: any) {
+    if (!Reflect.hasMetadata("events", target)) {
+      Reflect.defineMetadata("events", [], target);
+    }
+
+    const netEvents = Reflect.getMetadata("events", target) as any[];
+
+    netEvents.push({
+      name: eventName,
+      net: false,
+      key,
+    });
+    Reflect.defineMetadata("events", netEvents, target);
+  };
+};
+
+export const EventListener = () => {
+  return function <T extends { new (...args: any[]): any }>(constructor: T) {
+    return class extends constructor {
+      constructor(...args: any[]) {
         super(...args);
-        registerInstance(this);
+
+        if (!Reflect.hasMetadata("events", this)) {
+          Reflect.defineMetadata("events", [], this);
+        }
+
+        const events = Reflect.getMetadata("events", this) as any[];
+        events.forEach((event) => {
+          if (event.net) {
+            onNet(event.name, (...args: any[]) => {
+              this[event.key](source, ...args);
+            });
+          } else {
+            on(event.name, (...args: any[]) => {
+              this[event.key](...args);
+            });
+          }
+        });
       }
     };
-
-    return Wrapped as unknown as TFunction;
   };
-}
-
-export function OnNet(eventName: string): MethodDecorator {
-  return setEvent("net", eventName);
-}
-
-export function OnLocal(eventName: string): MethodDecorator {
-  return setEvent("local", eventName);
-}
-
-export const RemoteEvent = OnNet;
-export const LocalEvent = OnLocal;
+};

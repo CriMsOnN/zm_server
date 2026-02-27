@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/crimsonn/zm_server/internal/dto"
 	"github.com/crimsonn/zm_server/internal/models"
 	"github.com/jmoiron/sqlx"
 )
@@ -20,4 +21,15 @@ func (r *UserRepository) GetUsers() ([]models.User, error) {
 		return nil, err
 	}
 	return users, nil
+}
+
+func (r *UserRepository) CreateOrUpdateUser(user *dto.CreateOrUpdateUserDTO) error {
+	_, err := r.db.NamedExec(`
+	INSERT INTO users (name, fivem, license) VALUES (:name, :fivem, :license)
+	ON CONFLICT (fivem) DO UPDATE SET name = EXCLUDED.name, license = EXCLUDED.license, updated_at = NOW(), last_login = NOW()
+	`, user)
+	if err != nil {
+		return err
+	}
+	return nil
 }

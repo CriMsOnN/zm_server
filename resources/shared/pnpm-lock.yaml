@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
     devDependencies:
       '@citizenfx/client':
         specifier: 2.0.26198-1
@@ -23,8 +27,13 @@ packages:
   '@citizenfx/server@2.0.26261-1':
     resolution: {integrity: sha512-1xnpNOatQObfFlBEfgKQXNOaV1Xu9wTFul+eq2hAGjKMOqW2f5hE+4Ah30dT4+AnEFpEab/Lwkz3Ryw7GMWsOw==}
 
+  reflect-metadata@0.2.2:
+    resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
+
 snapshots:
 
   '@citizenfx/client@2.0.26198-1': {}
 
   '@citizenfx/server@2.0.26261-1': {}
+
+  reflect-metadata@0.2.2: {}

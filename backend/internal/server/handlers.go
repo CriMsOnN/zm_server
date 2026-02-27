@@ -16,10 +16,15 @@ type ClientSocketEventHandler interface {
 	HandleSocketEvent(action string, data json.RawMessage) (handled bool, responseEvent string, responseData any, err error)
 }
 
+type BackendSocketEventHandler interface {
+	HandleSocketEvent(action string, data json.RawMessage) (handled bool, responseEvent string, responseData any, err error)
+}
+
 type ServerHandlers struct {
-	userHandler    *user.UserHandler
-	wsLogger       *logrus.Entry
-	clientHandlers map[string]ClientSocketEventHandler
+	userHandler     *user.UserHandler
+	wsLogger        *logrus.Entry
+	clientHandlers  map[string]ClientSocketEventHandler
+	backendHandlers map[string]BackendSocketEventHandler
 }
 
 func NewServerHandlers(db *sqlx.DB) *ServerHandlers {
@@ -30,6 +35,9 @@ func NewServerHandlers(db *sqlx.DB) *ServerHandlers {
 		wsLogger:    logger.NewComponentLogger("websocket"),
 	}
 	handlers.clientHandlers = map[string]ClientSocketEventHandler{
+		"user": handlers.userHandler,
+	}
+	handlers.backendHandlers = map[string]BackendSocketEventHandler{
 		"user": handlers.userHandler,
 	}
 	return handlers

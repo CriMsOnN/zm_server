@@ -1,7 +1,12 @@
 import * as WebSocket from "ws";
 import { RequireConnected, type BackendWsMessage } from "@shared";
-
-export class Socket {
+import { Wrappers } from "@shared/types";
+const backendSecret = GetConvar("backend_secret", "");
+if (backendSecret === "") {
+  throw new Error("backend_secret is not configured");
+}
+const socketURL = `ws://localhost:8080/ws/backend?secret=${backendSecret}`;
+export class Socket extends Wrappers.Singleton<Socket>() {
   private socket: WebSocket.WebSocket;
   private isConnected: boolean;
   private messagesHandlers: Record<
@@ -9,10 +14,14 @@ export class Socket {
     ((message: BackendWsMessage) => void)[]
   >;
 
+  private retryCount: number;
+
   constructor(url: string) {
+    super();
     this.socket = new WebSocket.WebSocket(url);
     this.isConnected = false;
     this.messagesHandlers = {};
+    this.retryCount = 0;
   }
 
   public connect() {
@@ -34,7 +43,19 @@ export class Socket {
     };
     this.socket.onclose = () => {
       this.isConnected = false;
-      console.log("WebSocket connection closed");
+      this.isConnected = false;
+      if (this.retryCount < 3) {
+        setInterval(() => {
+          this.retryCount++;
+          console.log(
+            `[WebSocket] Retrying to connect... (attempt: ${this.retryCount})`,
+          );
+          if (this.isConnected || this.retryCount >= 3) {
+            return;
+          }
+          this.connect();
+        }, 5000);
+      }
     };
   }
 
@@ -60,3 +81,5 @@ export class Socket {
     this.socket.close();
   }
 }
+
+export const socket = new Socket(socketURL);
