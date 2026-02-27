@@ -3,3 +3,6 @@
 /resources/\[local\]/
 /db/
 /logs/
+node_modules/
+.replxx_history
+dist/

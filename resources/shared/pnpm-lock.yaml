@@ -1,0 +1,30 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    devDependencies:
+      '@citizenfx/client':
+        specifier: 2.0.26198-1
+        version: 2.0.26198-1
+      '@citizenfx/server':
+        specifier: 2.0.26261-1
+        version: 2.0.26261-1
+
+packages:
+
+  '@citizenfx/client@2.0.26198-1':
+    resolution: {integrity: sha512-yA3p2PQiLHuOtJVkCzOZ/FD4qSylIugl/GxbGowM2kBYilSbHpPP0OC+Cy3heeUng3SCYajnIhFbdQfjudKZ2g==}
+
+  '@citizenfx/server@2.0.26261-1':
+    resolution: {integrity: sha512-1xnpNOatQObfFlBEfgKQXNOaV1Xu9wTFul+eq2hAGjKMOqW2f5hE+4Ah30dT4+AnEFpEab/Lwkz3Ryw7GMWsOw==}
+
+snapshots:
+
+  '@citizenfx/client@2.0.26198-1': {}
+
+  '@citizenfx/server@2.0.26261-1': {}

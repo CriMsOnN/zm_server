@@ -5,9 +5,7 @@ import (
 	"net/http"
 
 	"github.com/crimsonn/zm_server/internal/env"
-	"github.com/crimsonn/zm_server/internal/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 )
 
@@ -24,28 +22,24 @@ var backendWebsocketUpgrader = websocket.Upgrader{
 
 func (h *ServerHandlers) BackendSocketJWTMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		secret := env.GetEnvString("FIVEM_BACKEND_SECRET", "")
+		secret := env.GetEnvString("BACKEND_SECRET", "")
 		if secret == "" {
-			h.wsLogger.Error("FIVEM_BACKEND_SECRET is not configured")
+			h.wsLogger.Error("BACKEND_SECRET is not configured")
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "backend socket secret is not configured"})
 			return
 		}
 
-		tokenString := utils.ExtractTokenFromHeader(c, "Authorization")
-		if tokenString == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing jwt token"})
+		token := c.Query("secret")
+		if token == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing secret"})
 			return
 		}
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-			return []byte(secret), nil
-		})
-		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid jwt token"})
+		if token != secret {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid secret"})
 			return
 		}
 
-		c.Set("backend_jwt", token)
 		c.Next()
 	}
 }
@@ -79,7 +73,10 @@ func (h *ServerHandlers) HandleBackendSocket(c *gin.Context) {
 
 		switch message.Event {
 		case "ping":
-			h.writeError(conn, "pong", "")
+			_ = conn.WriteJSON(gin.H{
+				"event": "pong",
+				"data":  gin.H{"message": "Pong"},
+			})
 		default:
 			h.writeError(conn, "unknown_event", ErrUnknownEvent.Error())
 		}
